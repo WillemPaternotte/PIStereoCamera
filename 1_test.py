@@ -1,33 +1,31 @@
 import cv2
 import numpy as np
-import subprocess
+from picamera2 import Picamera2
 
-def capture_image(camera_index):
+def capture_image(camera_id):
     """Capture an image from the specified camera and return it as a NumPy array."""
-    command = [
-        "libcamera-still",
-        "--camera", str(camera_index),
-        "-t", "1",
-        "--nopreview",
-        "--output", "-",  # Output to stdout instead of a file
-        "--encoding", "jpeg"  # Ensure JPEG output
-    ]
-
-    # Run the command and capture the output
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    picam2 = Picamera2(camera_num=camera_id)
+    config = picam2.create_still_configuration()
+    picam2.configure(config)
     
-    # Convert the output bytes to a NumPy array and decode it as an image
-    image = cv2.imdecode(np.frombuffer(result.stdout, dtype=np.uint8), cv2.IMREAD_COLOR)
+    picam2.start()
+    image = picam2.capture_array()  # Directly get image as NumPy array
+    picam2.stop()
+    
     return image
 
 # Capture images from both cameras
 image1 = capture_image(0)
 image2 = capture_image(1)
 
-# Check if images are valid
+# Ensure images were captured successfully
 if image1 is None or image2 is None:
     print("Error: Could not capture one or both images.")
 else:
+    # Convert images to OpenCV BGR format
+    image1 = cv2.cvtColor(image1, cv2.COLOR_RGB2BGR)
+    image2 = cv2.cvtColor(image2, cv2.COLOR_RGB2BGR)
+
     # Combine images side by side
     combined_image = cv2.hconcat([image1, image2])
 
