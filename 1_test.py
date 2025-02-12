@@ -1,3 +1,4 @@
+import time
 import cv2
 import numpy as np
 from picamera2 import Picamera2
@@ -9,6 +10,8 @@ def capture_image(camera_id):
     picam2.configure(config)
     
     picam2.start()
+    
+    time.sleep(1)
     image = picam2.capture_array()  # Directly get image as NumPy array
     picam2.stop()
     
@@ -28,6 +31,7 @@ else:
 
     # Combine images side by side
     combined_image = cv2.hconcat([image1, image2])
+    combined_image = cv2.resize(combined_image, (1920, 640))
 
     # Display the images
     cv2.imshow("Camera 0 and Camera 1", combined_image)
