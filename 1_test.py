@@ -3,37 +3,49 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 
-def capture_image(camera_id):
-    """Capture an image from the specified camera and return it as a NumPy array."""
+def start_camera(camera_id):
+    """Initialize and start the camera stream."""
     picam2 = Picamera2(camera_num=camera_id)
-    config = picam2.create_still_configuration()
+    config = picam2.create_video_configuration()
     picam2.configure(config)
-    
     picam2.start()
+    time.sleep(1)  # Allow time for the camera to adjust
+    return picam2
+
+# Start both cameras
+camera1 = start_camera(0)
+camera2 = start_camera(1)
+
+while True:
+    # Capture frames from both cameras
+    frame1 = camera1.capture_array()
+    frame2 = camera2.capture_array()
+
+    if frame1 is None or frame2 is None:
+        print("Error: Could not capture frames.")
+        break
+
+    # Convert to OpenCV BGR format
+    frame1 = cv2.cvtColor(frame1, cv2.COLOR_RGB2BGR)
+    frame2 = cv2.cvtColor(frame2, cv2.COLOR_RGB2BGR)
+
+    # Resize frames to ensure they match in height
+    # height = min(frame1.shape[0], frame2.shape[0])
+    # frame1 = cv2.resize(frame1, (frame1.shape[1], height))
+    # frame2 = cv2.resize(frame2, (frame2.shape[1], height))
+
+    # Combine frames side by side
+    combined_frame = cv2.hconcat([frame1, frame2])
+    combined_frame =  cv2.resize(combined_frame, (1920, 640))
     
-    time.sleep(1)
-    image = picam2.capture_array()  # Directly get image as NumPy array
-    picam2.stop()
-    
-    return image
+    # Display the video stream
+    cv2.imshow("Camera 0 and Camera 1", combined_frame)
 
-# Capture images from both cameras
-image1 = capture_image(0)
-image2 = capture_image(1)
+    # Break the loop if 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-# Ensure images were captured successfully
-if image1 is None or image2 is None:
-    print("Error: Could not capture one or both images.")
-else:
-    # Convert images to OpenCV BGR format
-    image1 = cv2.cvtColor(image1, cv2.COLOR_RGB2BGR)
-    image2 = cv2.cvtColor(image2, cv2.COLOR_RGB2BGR)
-
-    # Combine images side by side
-    combined_image = cv2.hconcat([image1, image2])
-    combined_image = cv2.resize(combined_image, (1920, 640))
-
-    # Display the images
-    cv2.imshow("Camera 0 and Camera 1", combined_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+# Clean up
+camera1.stop()
+camera2.stop()
+cv2.destroyAllWindows()
